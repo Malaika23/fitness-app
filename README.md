@@ -172,7 +172,7 @@ Fields:
 ## Clone repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Malaika23/fitness-app.git
 cd AiFitness
 ```
 
