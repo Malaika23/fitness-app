@@ -1,0 +1,72 @@
+package com.fitness.activityservice.service;
+
+import com.fitness.activityservice.controller.ActivityRequest;
+import com.fitness.activityservice.controller.ActivityResponse;
+import com.fitness.activityservice.exception.ActivityNotFoundException;
+import com.fitness.activityservice.model.Activity;
+import com.fitness.activityservice.repository.ActivityRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class ActivityService {
+
+    private final ActivityRepository activityRepository;
+
+    public ActivityResponse createActivity(ActivityRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+
+        Activity activity = new Activity();
+        activity.setUserId(request.getUserId());
+        activity.setType(request.getType());
+        activity.setDuration(request.getDuration());
+        activity.setCaloriesBurned(request.getCaloriesBurned());
+        activity.setStartTime(request.getStartTime());
+        activity.setAdditionalMetrics(request.getAdditionalMetrics());
+        activity.setCreatedAt(now);
+        activity.setUpdatedAt(now);
+
+        return toResponse(activityRepository.save(activity));
+    }
+
+    public ActivityResponse getActivity(String activityId) {
+        Activity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ActivityNotFoundException(activityId));
+
+        return toResponse(activity);
+    }
+
+    public List<ActivityResponse> getUserActivities(String userId) {
+        return activityRepository.findByUserId(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public void deleteActivity(String activityId) {
+        if (!activityRepository.existsById(activityId)) {
+            throw new ActivityNotFoundException(activityId);
+        }
+
+        activityRepository.deleteById(activityId);
+    }
+
+
+    private ActivityResponse toResponse(Activity activity) {
+        return new ActivityResponse(
+                activity.getId(),
+                activity.getUserId(),
+                activity.getType(),
+                activity.getDuration(),
+                activity.getCaloriesBurned(),
+                activity.getStartTime(),
+                activity.getAdditionalMetrics(),
+                activity.getCreatedAt(),
+                activity.getUpdatedAt()
+        );
+    }
+}
