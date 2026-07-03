@@ -14,6 +14,10 @@
     <groupId>com.fitness</groupId>
     <artifactId>activityservice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>aiservice</module>
+    </modules>
     <name>activityservice</name>
     <description>Activity service for Ai Fitness</description>
 
