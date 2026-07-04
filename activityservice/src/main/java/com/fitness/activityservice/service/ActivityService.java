@@ -6,6 +6,8 @@ import com.fitness.activityservice.exception.ActivityNotFoundException;
 import com.fitness.activityservice.model.Activity;
 import com.fitness.activityservice.repository.ActivityRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,8 +18,24 @@ import java.util.List;
 public class ActivityService {
 
     private final ActivityRepository activityRepository;
+    private final UserValidationService userValidationService;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Value("${rabbitmq.exchange.name}")
+    private String exchangeName;
+
+    @Value("${rabbitmq.routing.key}")
+    private String routingKey;
+
+    @Value("${rabbitmq.queue.name}")
+    private String queueName;
 
     public ActivityResponse createActivity(ActivityRequest request) {
+        boolean userExists = userValidationService.validateUser(request.getUserId());
+        if (!userExists) {
+            throw new RuntimeException("User not found with id: " + request.getUserId());
+        }
+
         LocalDateTime now = LocalDateTime.now();
 
         Activity activity = new Activity();
@@ -30,7 +48,11 @@ public class ActivityService {
         activity.setCreatedAt(now);
         activity.setUpdatedAt(now);
 
-        return toResponse(activityRepository.save(activity));
+        ActivityResponse response = toResponse(activityRepository.save(activity));
+
+        rabbitTemplate.convertAndSend(exchangeName, routingKey, response);
+
+        return response;
     }
 
     public ActivityResponse getActivity(String activityId) {
@@ -55,7 +77,6 @@ public class ActivityService {
         activityRepository.deleteById(activityId);
     }
 
-
     private ActivityResponse toResponse(Activity activity) {
         return new ActivityResponse(
                 activity.getId(),
@@ -66,7 +87,6 @@ public class ActivityService {
                 activity.getStartTime(),
                 activity.getAdditionalMetrics(),
                 activity.getCreatedAt(),
-                activity.getUpdatedAt()
-        );
+                activity.getUpdatedAt());
     }
 }

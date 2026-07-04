@@ -10,15 +10,14 @@ public class WebClientConfig {
 
     @Bean
     @LoadBalanced
-    public WebClient.Builder webClientBuilder(){
+    public WebClient.Builder webClientBuilder() {
         return WebClient.builder();
     }
 
     @Bean
-    public WebClient userServiceWebClient(WebClient.Builder webClientBuilder){
+    public WebClient userServiceWebClient(WebClient.Builder webClientBuilder) {
         return webClientBuilder
                 .baseUrl("http://USER-SERVICE")
                 .build();
     }
 }
-
