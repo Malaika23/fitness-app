@@ -24,6 +24,15 @@ services:
     networks:
       - db
     restart: unless-stopped
+  rabbitmq:
+    container_name: rabbitmq-fitness
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - db
+    restart: unless-stopped
 
 networks:
   db:
