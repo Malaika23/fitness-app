@@ -58,73 +58,168 @@ This project follows Microservices Architecture.
 
 Services are independently deployable and communicate via REST APIs.
 
-## Current Services
+## Current Services & API Contracts
 
-### 1. User Service
+### 1. User Service (`port: 8081`, Service Name: `USER-SERVICE`)
+Handles user profiles, authentication, and validation.
 
-Responsible for:
+#### **Register User**
+* **Endpoint:** `POST /api/user/register`
+* **Content-Type:** `application/json`
+* **Request Payload:**
+  ```json
+  {
+    "email": "testuser@example.com",
+    "password": "testpassword",
+    "firstName": "Test",
+    "lastName": "User"
+  }
+  ```
+* **Response (200 OK):**
+  ```json
+  {
+    "id": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "email": "testuser@example.com",
+    "firstName": "Test",
+    "lastName": "User",
+    "role": "USER",
+    "createdAt": "2026-07-09T14:10:33.294009",
+    "updatedAt": "2026-07-09T14:10:33.294009"
+  }
+  ```
 
-* User registration
-* User profile management
-* Storing user-related metadata
+#### **Get User Profile**
+* **Endpoint:** `GET /api/user/{userId}`
+* **Response (200 OK):**
+  ```json
+  {
+    "id": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "email": "testuser@example.com",
+    "firstName": "Test",
+    "lastName": "User",
+    "role": "USER",
+    "createdAt": "2026-07-09T14:10:33.294009",
+    "updatedAt": "2026-07-09T14:10:33.294009"
+  }
+  ```
 
-Database:
-
-* PostgreSQL
-
-Main APIs:
-
-* POST /api/users
-* GET /api/users/{id}
-* GET /api/users
+#### **Validate User Existence**
+* **Endpoint:** `GET /api/user/{userId}/validate`
+* **Response (200 OK):** `true` or `false`
 
 ---
 
-### 2. Activity Service
+### 2. Activity Service (`port: 8082`, Service Name: `ACTIVITYSERVICE`)
+Manages fitness logging and publishes events to RabbitMQ exchange `fitness.exchange` (`topic` exchange) under routing key `activity.tracking`.
 
-Responsible for:
+#### **Create Activity**
+* **Endpoint:** `POST /api/activities`
+* **Content-Type:** `application/json`
+* **Request Payload:**
+  ```json
+  {
+    "userId": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "type": "RUNNING",
+    "duration": 30,
+    "caloriesBurned": 300,
+    "startTime": "2026-07-09T10:00:00"
+  }
+  ```
+  *(Supported Types: `WALKING`, `RUNNING`, `CARDIO`, `CYCLING`)*
+* **Response (201 Created):**
+  ```json
+  {
+    "id": "6a4fac198ae84a7be4c7bbb8",
+    "userId": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "type": "RUNNING",
+    "duration": 30,
+    "caloriesBurned": 300,
+    "startTime": "2026-07-09T10:00:00",
+    "additionalMetrics": null,
+    "createdAt": "2026-07-09T14:11:37.9114577",
+    "updatedAt": "2026-07-09T14:11:37.8843408"
+  }
+  ```
 
-* Logging activities
-* Tracking workout duration
-* Maintaining user fitness history
+#### **Get Activity by ID**
+* **Endpoint:** `GET /api/activities/{activityId}`
+* **Response (200 OK):**
+  ```json
+  {
+    "id": "6a4fac198ae84a7be4c7bbb8",
+    "userId": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "type": "RUNNING",
+    "duration": 30,
+    "caloriesBurned": 300,
+    "startTime": "2026-07-09T10:00:00",
+    "additionalMetrics": null,
+    "createdAt": "2026-07-09T14:11:37.911",
+    "updatedAt": "2026-07-09T14:11:37.884"
+  }
+  ```
 
-Database:
+#### **Get Activities by User ID**
+* **Endpoint:** `GET /api/activities/user/{userId}`
+* **Response (200 OK):** Array of Activity Objects
 
-* MongoDB
-
-Main APIs:
-
-* POST /api/activities
-* GET /api/activities
-* GET /api/activities/{id}
-
-Supported activity types:
-
-* WALKING
-* RUNNING
-* CARDIO
-* CYCLING
+#### **Delete Activity**
+* **Endpoint:** `DELETE /api/activities/{activityId}`
+* **Response (204 No Content)**
 
 ---
 
-### 3. API Gateway (Planned / In Progress)
+### 3. AI Service (`port: 8083`, Service Name: `AISERVICE`)
+Fetches activity metrics and details to generate AI-backed health & fitness recommendations.
 
+#### **Get User Recommendations**
+* **Endpoint:** `GET /api/recommendation/user/{userId}`
+* **Response (200 OK):**
+  ```json
+  [
+    {
+      "id": "6a4fac4c5de75065919df8a3",
+      "userId": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+      "activityId": "6a4fac198ae84a7be4c7bbb8",
+      "activityType": "RUNNING",
+      "recommendation": "Great pace! Keep your hydration up and maintain your steady pace.",
+      "improvements": null,
+      "suggestions": null,
+      "safetyMeasures": ["Stretch before running", "Drink water"],
+      "createdAt": null
+    }
+  ]
+  ```
+
+#### **Get Activity Recommendation**
+* **Endpoint:** `GET /api/recommendation/activity/{activityId}`
+* **Response (200 OK):**
+  ```json
+  {
+    "id": "6a4fac4c5de75065919df8a3",
+    "userId": "f182230f-5a96-4fe5-b8a0-50b75402add1",
+    "activityId": "6a4fac198ae84a7be4c7bbb8",
+    "activityType": "RUNNING",
+    "recommendation": "Great pace! Keep your hydration up and maintain your steady pace.",
+    "improvements": null,
+    "suggestions": null,
+    "safetyMeasures": ["Stretch before running", "Drink water"],
+    "createdAt": null
+  }
+  ```
+
+---
+
+### 4. Discovery Server (`port: 8761`, Service Name: `eureka`)
+Eureka Server responsible for service registration and routing lookup for internal microservice communication.
+
+---
+
+### 5. API Gateway (Planned / In Progress)
 Responsibilities:
-
 * Single entry point
 * Request routing
 * Security filters
 * Rate limiting
-
----
-
-### 4. Discovery Server (Planned / In Progress)
-
-Responsibilities:
-
-* Service registration
-* Service lookup
-* Dynamic routing
 
 ---
 
