@@ -1,6 +1,9 @@
 package com.fitness.aiservice.model;
 
 import lombok.Data;
+import lombok.Builder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -9,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Document(collection = "recommendations")
 public class Recommendation {
 

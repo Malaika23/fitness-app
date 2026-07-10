@@ -1,0 +1,292 @@
+package com.fitness.aiservice.service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Arrays;
+
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fitness.aiservice.model.Activity;
+import com.fitness.aiservice.model.Recommendation;
+import com.fitness.aiservice.repository.RecommendationRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class ActivityAiService {
+
+    private final GeminiService geminiService;
+    private final RecommendationRepository recommendationRepository;
+
+    public Recommendation generateRecommendation(Activity activity) {
+        try {
+            String prompt = createPromptForActivity(activity);
+            String aiResponse = geminiService.getAnswer(prompt);
+            log.info("RESPONSE FROM AI: {} ", aiResponse);
+            return processAiResponse(activity, aiResponse);
+        } catch (Exception e) {
+            log.error("Failed to generate recommendation, using default", e);
+            return createDefaultRecommendation(activity);
+        }
+    }
+
+    private Recommendation processAiResponse(Activity activity, String aiResponse) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(aiResponse);
+
+            JsonNode targetNode = rootNode;
+            // Check if this is the wrapped Gemini API response
+            if (rootNode.has("candidates")) {
+                JsonNode textNode = rootNode.path("candidates")
+                                    .path(0)
+                                    .path("content")
+                                    .path("parts")
+                                    .path(0)
+                                    .path("text");
+                String jsonContent = textNode.asText()
+                                    .replaceAll("```json\\n","")
+                                    .replaceAll("```\\n","")
+                                    .replaceAll("\\n```","")
+                                    .trim();
+                targetNode = mapper.readTree(jsonContent);
+            }
+
+            JsonNode analysisJson = targetNode;
+            JsonNode analysisNode = analysisJson.path("analysis");
+
+            StringBuilder fullAnalysis = new StringBuilder();
+            addAnalysisSection(fullAnalysis, analysisNode, "overallSummary", "Overall Summary:");
+            addAnalysisSection(fullAnalysis, analysisNode, "fitnessScore", "Fitness Score:");
+            addAnalysisSection(fullAnalysis, analysisNode, "intensityLevel", "Intensity Level:");
+            addAnalysisSection(fullAnalysis, analysisNode, "caloriesBurnt", "Calories Burnt:");
+            addAnalysisSection(fullAnalysis, analysisNode, "overall", "Overall:");
+            addAnalysisSection(fullAnalysis, analysisNode, "pace", "Pace:");
+            addAnalysisSection(fullAnalysis, analysisNode, "heartRate", "Heart Rate:");
+            addAnalysisSection(fullAnalysis, analysisNode, "caloriesBurned", "Calories:");
+
+            List<String> improvements = extractImprovements(analysisJson.path("improvements"));
+            List<String> suggestions = extractSuggestions(analysisJson.path("recommendations"));
+            List<String> safety = extractSafetyGuidelines(analysisJson.path("warnings"));
+
+            Recommendation recommendation = Recommendation.builder()
+                    .activityId(activity.getId())
+                    .userId(activity.getUserId())
+                    .activityType(activity.getType())
+                    .recommendation(fullAnalysis.toString().trim())
+                    .improvements(improvements)
+                    .suggestions(suggestions)
+                    .safetyMeasures(safety)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            return recommendationRepository.save(recommendation);
+
+        } catch (Exception e) {
+            log.error("Error processing AI response, falling back to default", e);
+            return createDefaultRecommendation(activity);
+        }
+    }
+
+    private Recommendation createDefaultRecommendation(Activity activity) {
+        Recommendation recommendation = Recommendation.builder()
+                .activityId(activity.getId())
+                .userId(activity.getUserId())
+                .activityType(activity.getType())
+                .recommendation("Unable to generate detailed analysis")
+                .improvements(Collections.singletonList("Continue with your current routine"))
+                .suggestions(Collections.singletonList("Consider consulting a fitness professional"))
+                .safetyMeasures(Arrays.asList(
+                        "Always warm up before exercise",
+                        "Stay hydrated",
+                        "Listen to your body"
+                ))
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        return recommendationRepository.save(recommendation);
+    }
+
+    private List<String> extractSafetyGuidelines(JsonNode warningsNode) {
+        List<String> safety = new ArrayList<>();
+        JsonNode precautions = warningsNode.path("precautions");
+        if (precautions.isArray()) {
+            precautions.forEach(item -> safety.add(item.asText()));
+        } else if (warningsNode.isArray()) { // fallback if warningsNode itself is an array
+            warningsNode.forEach(item -> safety.add(item.asText()));
+        }
+        return safety.isEmpty() ?
+                Collections.singletonList("Follow general safety guidelines") :
+                safety;
+    }
+
+    private List<String> extractSuggestions(JsonNode recommendationsNode) {
+        List<String> suggestions = new ArrayList<>();
+        JsonNode exercises = recommendationsNode.path("recommendedExercises");
+        if (exercises.isArray()) {
+            exercises.forEach(ex -> suggestions.add(ex.asText()));
+        } else if (recommendationsNode.isArray()) { // fallback if structure is different
+            recommendationsNode.forEach(suggestion -> {
+                String workout = suggestion.path("workout").asText();
+                String description = suggestion.path("description").asText();
+                suggestions.add(String.format("%s: %s", workout, description));
+            });
+        }
+        
+        String nextWorkout = recommendationsNode.path("nextWorkout").asText();
+        if (!nextWorkout.isEmpty()) {
+            suggestions.add(0, "Next Workout: " + nextWorkout);
+        }
+        
+        return suggestions.isEmpty() ?
+                Collections.singletonList("No specific suggestions provided") :
+                suggestions;
+    }
+
+    private List<String> extractImprovements(JsonNode improvementsNode) {
+        List<String> improvements = new ArrayList<>();
+        if (improvementsNode.isArray()) {
+            improvementsNode.forEach(improvement -> {
+                String area = improvement.path("area").asText();
+                String detail = improvement.path("suggestion").asText();
+                if (detail.isEmpty()) {
+                    detail = improvement.path("recommendation").asText();
+                }
+                if (!area.isEmpty() || !detail.isEmpty()) {
+                    improvements.add(String.format("%s: %s", area, detail));
+                }
+            });
+        }
+        return improvements.isEmpty() ?
+                Collections.singletonList("No specific improvements provided") :
+                improvements;
+    }
+
+    private void addAnalysisSection(StringBuilder fullAnalysis, JsonNode analysisNode, String key, String prefix) {
+        if (!analysisNode.path(key).isMissingNode() && !analysisNode.path(key).asText().isEmpty()) {
+            fullAnalysis.append(prefix)
+                    .append(" ")
+                    .append(analysisNode.path(key).asText())
+                    .append(" ");
+        }
+    }
+
+    private String generateFallbackRecommendation(Activity activity) {
+        int duration = activity.getDuration() != null ? activity.getDuration() : 30;
+        int calories = activity.getCaloriesBurned() != null ? activity.getCaloriesBurned() : 250;
+        String intensity = duration > 45 ? "High" : (duration > 20 ? "Moderate" : "Low");
+        int score = duration > 30 ? 85 : 70;
+
+        return String.format("""
+            {
+              "analysis": {
+                "fitnessScore": %d,
+                "intensityLevel": "%s",
+                "caloriesBurnt": %d,
+                "areasWorked": ["Cardiovascular System", "Lower Body", "Core"],
+                "formAnalysis": "Form looks solid. Focus on steady rhythmic breathing and midfoot strike.",
+                "consistency": "Good",
+                "overallSummary": "Great %d-minute session. You maintained a steady energy output and burned %d calories."
+              },
+              "improvements": [
+                {
+                  "area": "Endurance",
+                  "suggestion": "Gradually increase weekly volume by 10%%.",
+                  "priority": "Medium"
+                }
+              ],
+              "recommendations": {
+                "nextWorkout": "Active Recovery / Mobility Session",
+                "recommendedExercises": ["Foam rolling", "Dynamic stretching"],
+                "recommendedDuration": "20 minutes",
+                "recommendedIntensity": "Low",
+                "recoveryAdvice": "Hydrate well and stretch post-session.",
+                "hydrationAdvice": "Aim to drink 500-700ml of water with electrolytes.",
+                "nutritionAdvice": "Refuel with a mix of carbohydrates and lean proteins within 45 minutes.",
+                "stretchingExercises": ["Hamstring stretch", "Calf stretch", "Quad stretch"],
+                "weeklyGoal": "Target 3 consistent sessions of similar intensity."
+              },
+              "warnings": {
+                "injuryRisk": "Low",
+                "overtrainingRisk": "Low",
+                "precautions": ["Always warm up and cool down properly."]
+              }
+            }
+            """, score, intensity, calories, duration, calories);
+    }
+
+    private String createPromptForActivity(Activity activity) {
+        return String.format("""
+            You are an expert fitness coach, sports scientist, and physiotherapist.
+
+            Analyze the following fitness activity and provide personalized recommendations.
+
+            Activity Details:
+            %s
+
+            Your response MUST be valid JSON only.
+
+            Use the following schema:
+
+            {
+            "analysis": {
+                "fitnessScore": 0,
+                "intensityLevel": "Low | Moderate | High",
+                "caloriesBurnt": 0,
+                "areasWorked": [],
+                "formAnalysis": "",
+                "consistency": "",
+                "overallSummary": ""
+            },
+            "improvements": [
+                {
+                "area": "",
+                "suggestion": "",
+                "priority": "High | Medium | Low"
+                }
+            ],
+            "recommendations": {
+                "nextWorkout": "",
+                "recommendedExercises": [],
+                "recommendedDuration": "",
+                "recommendedIntensity": "",
+                "recoveryAdvice": "",
+                "hydrationAdvice": "",
+                "nutritionAdvice": "",
+                "stretchingExercises": [],
+                "weeklyGoal": ""
+            },
+            "warnings": {
+                "injuryRisk": "",
+                "overtrainingRisk": "",
+                "precautions": []
+            }
+            }
+
+            Rules:
+            - Give a fitnessScore between 0 and 100.
+            - Estimate caloriesBurnt using the activity duration, intensity, and type.
+            - Identify the major muscle groups worked.
+            - Suggest practical improvements.
+            - Recommend the next workout based on recovery principles.
+            - If the workout intensity is very high, recommend recovery instead of another intense session.
+            - If the activity is too short or inconsistent, explain why.
+            - Keep recommendations realistic and evidence-based.
+            - Do not include markdown, explanations, or code fences.
+            - Each field should be concise.
+            - Maximum 2 sentences for any text field.
+            - Maximum 40 words for recommendations.
+            - Keep the response suitable for a mobile fitness application.
+            - Avoid repeating information already present in other fields.
+            - Return clean JSON only.
+
+            """, activity);
+    }
+}

@@ -6,6 +6,8 @@ import com.fitness.activityservice.exception.ActivityNotFoundException;
 import com.fitness.activityservice.model.Activity;
 import com.fitness.activityservice.repository.ActivityRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ActivityService {
 
     private final ActivityRepository activityRepository;
@@ -50,7 +53,12 @@ public class ActivityService {
 
         ActivityResponse response = toResponse(activityRepository.save(activity));
 
-        rabbitTemplate.convertAndSend(exchangeName, routingKey, response);
+        // Publish to RabbitMQ for AI Processing
+        try {
+            rabbitTemplate.convertAndSend(exchangeName, routingKey, response);
+        } catch (Exception e) {
+            log.error("Failed to send activity to RabbitMQ", e);
+        }
 
         return response;
     }
