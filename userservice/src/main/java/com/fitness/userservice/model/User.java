@@ -5,7 +5,6 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,6 +17,8 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String email;
+
+    private String keycloakId;
 
     @Column(nullable = false)
     private String password;

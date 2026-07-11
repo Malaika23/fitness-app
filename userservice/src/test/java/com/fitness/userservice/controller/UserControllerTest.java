@@ -50,6 +50,7 @@ class UserControllerTest {
         String userId = "user-123";
         UserResponse response = new UserResponse(
                 userId,
+                null,
                 "john.doe@example.com",
                 "John",
                 "Doe",
@@ -82,6 +83,7 @@ class UserControllerTest {
 
         UserResponse response = new UserResponse(
                 "new-uuid",
+                null,
                 "jane.smith@fitness.com",
                 "Jane",
                 "Smith",
