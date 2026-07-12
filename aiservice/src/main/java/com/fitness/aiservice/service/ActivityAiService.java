@@ -178,6 +178,7 @@ public class ActivityAiService {
         }
     }
 
+    @SuppressWarnings("unused")
     private String generateFallbackRecommendation(Activity activity) {
         int duration = activity.getDuration() != null ? activity.getDuration() : 30;
         int calories = activity.getCaloriesBurned() != null ? activity.getCaloriesBurned() : 250;
@@ -223,13 +224,21 @@ public class ActivityAiService {
     }
 
     private String createPromptForActivity(Activity activity) {
+        String activityTypeStr = activity.getType();
+        if ("OTHER".equalsIgnoreCase(activityTypeStr) && activity.getAdditionalMetrics() != null && activity.getAdditionalMetrics().containsKey("customType")) {
+            activityTypeStr = "OTHER (" + activity.getAdditionalMetrics().get("customType") + ")";
+        }
         return String.format("""
             You are an expert fitness coach, sports scientist, and physiotherapist.
 
             Analyze the following fitness activity and provide personalized recommendations.
 
             Activity Details:
-            %s
+            - Activity Type: %s
+            - Duration: %d minutes
+            - Calories Burned: %d
+            - Start Time: %s
+            - Additional Metrics: %s
 
             Your response MUST be valid JSON only.
 
@@ -287,6 +296,12 @@ public class ActivityAiService {
             - Avoid repeating information already present in other fields.
             - Return clean JSON only.
 
-            """, activity);
+            """,
+            activityTypeStr,
+            activity.getDuration() != null ? activity.getDuration() : 30,
+            activity.getCaloriesBurned() != null ? activity.getCaloriesBurned() : 200,
+            activity.getStartTime() != null ? activity.getStartTime().toString() : "N/A",
+            activity.getAdditionalMetrics() != null ? activity.getAdditionalMetrics().toString() : "{}"
+        );
     }
 }

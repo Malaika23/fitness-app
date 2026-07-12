@@ -1,121 +1,75 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Box, Button, Typography } from "@mui/material";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "react-oauth2-code-pkce";
+import { useDispatch } from "react-redux";
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router";
+import { setCredentials } from "./store/authSlice";
+import ActivityForm from "./components/ActivityForm";
+import ActivityList from "./components/ActivityList";
+import ActivityDetail from "./components/ActivityDetail";
+
+const ActvitiesPage = () => {
+  return (<Box sx={{ p: 2, border: '1px dashed grey' }}>
+    <ActivityForm onActivitiesAdded={() => window.location.reload()} />
+    <ActivityList />
+  </Box>);
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { token, tokenData, logIn, logOut, isAuthenticated } = useContext(AuthContext);
+  const dispatch = useDispatch();
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    if (token) {
+      dispatch(setCredentials({ token, user: tokenData }));
+      setAuthReady(true);
+    }
+  }, [token, tokenData, dispatch]);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <Router>
+      {!token ? (
+        <Box
+          sx={{
+            height: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
         >
-          Count is {count}
-        </button>
-      </section>
+          <Typography variant="h4" gutterBottom>
+            Welcome to the Fitness Tracker App
+          </Typography>
+          <Typography variant="subtitle1" sx={{ mb: 3 }}>
+            Please login to access your activities
+          </Typography>
+          <Button variant="contained" color="primary" size="large" onClick={() => {
+            logIn();
+          }}>
+            LOGIN
+          </Button>
+        </Box>
+      ) : (
+        // <div>
+        //   <pre>{JSON.stringify(tokenData, null, 2)}</pre>
+        //   <pre>{JSON.stringify(token, null, 2)}</pre>
+        // </div>
+        <Box sx={{ p: 2, border: '1px dashed grey' }}>
+          <Button variant="contained" color="secondary" onClick={logOut}>
+            Logout
+          </Button>
+          <Routes>
+            <Route path="/activities" element={<ActvitiesPage />} />
+            <Route path="/activities/:id" element={<ActivityDetail />} />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+            <Route path="/" element={token ? <Navigate to="/activities" replace /> : <div>Welcome! Please Login.</div>} />
+          </Routes>
+        </Box>
+      )}
+    </Router>
   )
 }
 
