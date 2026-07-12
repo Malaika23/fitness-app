@@ -388,8 +388,6 @@ This project helped me understand:
 
 Planned enhancements:
 
-* [x] JWT authentication (Keycloak integration)
-* [x] AI-based fitness recommendations (Gemini 2.5 integration)
 * Kafka event streaming
 * Redis caching
 * Workout recommendation engine
