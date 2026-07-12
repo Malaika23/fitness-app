@@ -14,6 +14,19 @@ This project is inspired by EmbarkX’s microservices architecture course and ex
 
 ---
 
+# 🖥️ Visual Showcase
+
+### 1. Keycloak Authentication & Login Screen
+![Login Screen](docs/screenshots/login.png)
+
+### 2. User Activity Dashboard
+![Activity Dashboard](docs/screenshots/dashboard.png)
+
+### 3. AI-Driven Personal Recommendation
+![AI Recommendations](docs/screenshots/recommendations.png)
+
+---
+
 # 🚀 Tech Stack
 
 ### Frontend
@@ -60,9 +73,26 @@ This project is inspired by EmbarkX’s microservices architecture course and ex
 
 # 🏗 Architecture
 
-This project follows Microservices Architecture.
-
 Services are independently deployable and communicate via REST APIs.
+
+```mermaid
+graph TD
+    Client[React Client: Port 5173] -->|HTTP Requests| Gateway[Spring Cloud Gateway: Port 8080]
+    Gateway -->|Discovery Lookup| Eureka[Eureka Server: Port 8761]
+    Gateway -->|Syncs/Validates User| UserSvc[User Service: Port 8081]
+    Gateway -->|Tracks Workouts| ActSvc[Activity Service: Port 8082]
+    Gateway -->|Requests Analysis| AISvc[AI Service: Port 8083]
+    
+    UserSvc -->|Authentication/Registration| Keycloak[Keycloak Identity: Port 8181]
+    UserSvc -->|Saves Profiles| Postgre[PostgreSQL: Port 5332]
+    
+    ActSvc -->|Publishes Events| RabbitMQ[RabbitMQ: Port 5672]
+    ActSvc -->|Saves Activities| MongoDB[MongoDB: Port 27017]
+    
+    AISvc -->|Subscribes to Events| RabbitMQ
+    AISvc -->|Saves Recommendations| MongoDB
+    AISvc -->|Prompts Analysis| Gemini[Google Gemini AI API]
+```
 
 ## Current Services & API Contracts
 
@@ -245,25 +275,26 @@ Acts as a single entry point for all client requests, executing:
 ## User Entity
 
 Fields:
-
 * id
-* name
 * email
-* age
-* weight
-* height
+* firstName
+* lastName
+* role
 * createdAt
+* updatedAt
 
 ## Activity Entity
 
 Fields:
-
 * id
 * userId
-* type
+* type (enum ActivityType)
 * duration
 * caloriesBurned
-* date
+* startTime
+* additionalMetrics (Map)
+* createdAt
+* updatedAt
 
 ---
 
@@ -273,7 +304,7 @@ Fields:
 
 ```bash
 git clone https://github.com/Malaika23/fitness-app.git
-cd AiFitness
+cd fitness-app
 ```
 
 ## Start databases using Docker
@@ -380,7 +411,7 @@ This project helped me understand:
 * Database-per-service pattern
 * Docker containerization
 * Monitoring distributed systems
-* Production-grade backend engineering
+* Production-oriented backend concepts
 
 ---
 
