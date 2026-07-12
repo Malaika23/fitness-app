@@ -16,13 +16,19 @@ This project is inspired by EmbarkX’s microservices architecture course and ex
 
 # 🚀 Tech Stack
 
-### Backend
+### Frontend
+* React (v19) & Vite
+* Redux Toolkit (State Management)
+* Material UI (MUI) & Emotion
+* React Router (v8)
+* React OAuth2 Code PKCE (Authentication & Login)
 
+### Backend
 * Java 21
 * Spring Boot
-* Spring Web
+* Spring Web & WebFlux
 * Spring Data JPA
-* Spring Security (planned)
+* Spring Security & OAuth2 Resource Server
 * Hibernate
 
 ### Databases
@@ -214,12 +220,11 @@ Eureka Server responsible for service registration and routing lookup for intern
 
 ---
 
-### 5. API Gateway (Planned / In Progress)
-Responsibilities:
-* Single entry point
-* Request routing
-* Security filters
-* Rate limiting
+### 5. API Gateway (`port: 8080`, Service Name: `gateway`)
+Acts as a single entry point for all client requests, executing:
+* Request routing to microservices
+* Security filters (JWT validation via Keycloak)
+* CORS configuration for the frontend client (listening at `http://localhost:5173`)
 
 ---
 
@@ -279,18 +284,49 @@ docker-compose up -d
 
 ## Run services
 
-Start each service individually:
+1. Create a `.env` file at the repository root containing your Gemini API credentials for the AI Service:
+   ```env
+   GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
 
-* User Service
-* Activity Service
-* Gateway
-* Discovery Server
+2. Start the backend services in order (allowing each to boot fully):
+   - **Config Server** (`port: 8888`)
+   - **Discovery Server (Eureka)** (`port: 8761`)
+   - **User Service** (`port: 8081`)
+   - **Activity Service** (`port: 8082`)
+   - **AI Service** (`port: 8083`)
+   - **Gateway** (`port: 8080`)
+
+   To run any service:
+   ```bash
+   cd <service-folder>
+   ./mvnw spring-boot:run
+   ```
+
+3. Start the Frontend client:
+   ```bash
+   cd fitness-app-frontend
+   npm install
+   npm run dev
+   ```
+   The client will open at `http://localhost:5173`.
 
 ---
 
-# 🧪 API Testing
+# 🧪 Testing
 
+### API Testing
 Use Postman to test endpoints.
+
+### E2E Testing
+Automated end-to-end integration tests are implemented using Playwright to verify authentication, custom activity logging, and AI recommendations.
+
+To run the automated tests:
+```bash
+cd fitness-app-frontend
+npm run test:e2e
+```
 
 Example request:
 
@@ -352,10 +388,10 @@ This project helped me understand:
 
 Planned enhancements:
 
-* JWT authentication
+* [x] JWT authentication (Keycloak integration)
+* [x] AI-based fitness recommendations (Gemini 2.5 integration)
 * Kafka event streaming
 * Redis caching
-* AI-based fitness recommendations
 * Workout recommendation engine
 * CI/CD pipeline
 * Kubernetes deployment
