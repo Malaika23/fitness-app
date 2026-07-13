@@ -23,6 +23,24 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permit all CORS preflight requests
                         .pathMatchers("/actuator/**", "/api/user/register").permitAll()
+                        .pathMatchers("/api/activities/user/{userId}").access((authentication, context) -> {
+                            String userId = context.getVariables().get("userId").toString();
+                            return authentication.map(a -> {
+                                if (a.getPrincipal() instanceof org.springframework.security.oauth2.jwt.Jwt jwt) {
+                                    return new org.springframework.security.authorization.AuthorizationDecision(jwt.getSubject().equals(userId));
+                                }
+                                return new org.springframework.security.authorization.AuthorizationDecision(false);
+                            });
+                        })
+                        .pathMatchers("/api/recommendation/user/{userId}").access((authentication, context) -> {
+                            String userId = context.getVariables().get("userId").toString();
+                            return authentication.map(a -> {
+                                if (a.getPrincipal() instanceof org.springframework.security.oauth2.jwt.Jwt jwt) {
+                                    return new org.springframework.security.authorization.AuthorizationDecision(jwt.getSubject().equals(userId));
+                                }
+                                return new org.springframework.security.authorization.AuthorizationDecision(false);
+                            });
+                        })
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();

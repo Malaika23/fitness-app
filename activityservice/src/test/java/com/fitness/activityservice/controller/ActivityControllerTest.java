@@ -159,4 +159,14 @@ class ActivityControllerTest {
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.message").value("Activity not found with id: missing-id"));
         }
+
+        @Test
+        void createActivity_withInvalidType_returnsBadRequest() throws Exception {
+                String invalidPayload = "{\"userId\":\"user-1\",\"type\":\"INVALID_TYPE\",\"duration\":30,\"caloriesBurned\":250}";
+
+                mockMvc.perform(post("/api/activities")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(invalidPayload))
+                                .andExpect(status().isBadRequest());
+        }
 }

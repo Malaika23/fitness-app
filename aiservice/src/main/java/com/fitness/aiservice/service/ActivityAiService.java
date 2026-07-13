@@ -96,18 +96,64 @@ public class ActivityAiService {
     }
 
     private Recommendation createDefaultRecommendation(Activity activity) {
+        String type = activity.getType() != null ? activity.getType() : "GENERAL";
+        int duration = activity.getDuration() != null ? activity.getDuration() : 30;
+        int calories = activity.getCaloriesBurned() != null ? activity.getCaloriesBurned() : 200;
+        
+        int score = duration > 45 ? 85 : (duration > 20 ? 70 : 55);
+        String intensity = duration > 45 ? "High" : (duration > 20 ? "Moderate" : "Low");
+        
+        String analysis = String.format("Overall Summary: A great %d-minute %s session. You maintained consistency and burned %d calories. Fitness Score: %d. Intensity Level: %s.", 
+                duration, type, calories, score, intensity);
+
+        List<String> improvements = new ArrayList<>();
+        List<String> suggestions = new ArrayList<>();
+        List<String> safety = new ArrayList<>();
+
+        if ("RUNNING".equalsIgnoreCase(type)) {
+            improvements.add("Endurance: Gradually increase weekly volume by 10% to improve performance.");
+            improvements.add("Pacing: Practice negative splits during longer runs.");
+            suggestions.add("Next Workout: Active recovery walking or light swimming");
+            suggestions.add("Foam rolling");
+            suggestions.add("Dynamic leg swings");
+            safety.add("Avoid running on hard concrete repeatedly");
+            safety.add("Monitor foot strike and posture");
+        } else if ("WALKING".equalsIgnoreCase(type)) {
+            improvements.add("Cardio load: Increase speed to a brisk pace to raise heart rate.");
+            improvements.add("Postures: Keep spine tall and engage core.");
+            suggestions.add("Next Workout: Interval running or bodyweight strength session");
+            suggestions.add("Incline treadmill walking");
+            suggestions.add("Bodyweight squats");
+            safety.add("Wear supportive athletic shoes");
+            safety.add("Stay alert to your surroundings");
+        } else if ("CYCLING".equalsIgnoreCase(type)) {
+            improvements.add("Cadence: Aim for 80-90 RPM to protect knees.");
+            improvements.add("Postures: Ensure optimal seat height to maximize power.");
+            suggestions.add("Next Workout: Core stability and upper body strength");
+            suggestions.add("Planks and side planks");
+            suggestions.add("Hip flexor stretches");
+            safety.add("Always wear a helmet");
+            safety.add("Check tire pressure before riding");
+        } else {
+            improvements.add("Consistency: Schedule 3 structured sessions per week.");
+            improvements.add("Intensity: Focus on maintaining target heart rate zones.");
+            suggestions.add("Next Workout: Moderate-intensity cardio or mobility flow");
+            suggestions.add("Light stretching");
+            suggestions.add("Yoga session");
+            safety.add("Always warm up and cool down");
+            safety.add("Listen to your body and rest when needed");
+        }
+
+        safety.add("Stay hydrated");
+
         Recommendation recommendation = Recommendation.builder()
                 .activityId(activity.getId())
                 .userId(activity.getUserId())
                 .activityType(activity.getType())
-                .recommendation("Unable to generate detailed analysis")
-                .improvements(Collections.singletonList("Continue with your current routine"))
-                .suggestions(Collections.singletonList("Consider consulting a fitness professional"))
-                .safetyMeasures(Arrays.asList(
-                        "Always warm up before exercise",
-                        "Stay hydrated",
-                        "Listen to your body"
-                ))
+                .recommendation(analysis)
+                .improvements(improvements)
+                .suggestions(suggestions)
+                .safetyMeasures(safety)
                 .createdAt(LocalDateTime.now())
                 .build();
 

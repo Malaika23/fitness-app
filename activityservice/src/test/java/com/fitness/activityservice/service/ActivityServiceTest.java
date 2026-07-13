@@ -204,4 +204,44 @@ class ActivityServiceTest {
         verify(activityRepository, times(1)).existsById(activityId);
         verify(activityRepository, never()).deleteById(anyString());
     }
+
+    @Test
+    void createActivity_whenRabbitMqFails_savesAndReturnsResponseSuccessfully() {
+        // Arrange
+        ActivityRequest request = new ActivityRequest();
+        request.setUserId("user-123");
+        request.setType(ActivityType.RUNNING);
+        request.setDuration(45);
+        request.setCaloriesBurned(350);
+        request.setStartTime(LocalDateTime.of(2026, 6, 1, 8, 0));
+        request.setAdditionalMetrics(Map.of("distance", 6.5));
+
+        Activity savedActivity = new Activity();
+        savedActivity.setId("activity-456");
+        savedActivity.setUserId(request.getUserId());
+        savedActivity.setType(request.getType());
+        savedActivity.setDuration(request.getDuration());
+        savedActivity.setCaloriesBurned(request.getCaloriesBurned());
+        savedActivity.setStartTime(request.getStartTime());
+        savedActivity.setAdditionalMetrics(request.getAdditionalMetrics());
+        savedActivity.setCreatedAt(LocalDateTime.now());
+        savedActivity.setUpdatedAt(LocalDateTime.now());
+
+        when(userValidationService.validateUser("user-123")).thenReturn(true);
+        when(activityRepository.save(any(Activity.class))).thenReturn(savedActivity);
+        
+        doThrow(new RuntimeException("RabbitMQ Connection Refused"))
+                .when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(ActivityResponse.class));
+
+        // Act
+        ActivityResponse response = activityService.createActivity(request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("activity-456", response.getId());
+        assertEquals("user-123", response.getUserId());
+        verify(userValidationService, times(1)).validateUser("user-123");
+        verify(activityRepository, times(1)).save(any(Activity.class));
+        verify(rabbitTemplate, times(1)).convertAndSend(eq("fitness.exchange"), eq("activity.tracking"), any(ActivityResponse.class));
+    }
 }

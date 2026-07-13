@@ -60,6 +60,17 @@ export const getActivityDetail = async (id) => {
     return { data: activityData };
 };
 
+export const getRecommendationForActivity = async (id) => {
+    const response = await fetch(`${BASE_URL}/api/recommendation/activity/${id}`, {
+        method: 'GET',
+        headers: getHeaders()
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+};
+
 export const addActivity = async (activity) => {
     const userId = localStorage.getItem('userId');
     if (!userId) {

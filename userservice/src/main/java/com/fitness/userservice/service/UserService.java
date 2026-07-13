@@ -25,10 +25,12 @@ public class UserService {
     }
 
     public UserResponse register(RegisterRequest request) {
-
         if (userRepository.existsByEmail(request.getEmail())) {
             User existingUser = userRepository.findByEmail(request.getEmail());
-            if (existingUser.getKeycloakId() == null || !existingUser.getKeycloakId().equals(request.getKeycloakId())) {
+            if (existingUser.getKeycloakId() != null && !existingUser.getKeycloakId().equals(request.getKeycloakId())) {
+                throw new RuntimeException("Email already in use by another account: " + request.getEmail());
+            }
+            if (existingUser.getKeycloakId() == null) {
                 existingUser.setKeycloakId(request.getKeycloakId());
                 existingUser = userRepository.save(existingUser);
             }

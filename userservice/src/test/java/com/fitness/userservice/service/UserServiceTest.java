@@ -111,16 +111,23 @@ class UserServiceTest {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("existing@example.com");
         request.setPassword("password123");
+        request.setKeycloakId("new-keycloak-id");
+
+        User existingUser = new User();
+        existingUser.setEmail("existing@example.com");
+        existingUser.setKeycloakId("old-keycloak-id");
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(existingUser);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             userService.register(request);
         });
 
-        assertEquals("Email already exist", exception.getMessage());
+        assertEquals("Email already in use by another account: existing@example.com", exception.getMessage());
         verify(userRepository, times(1)).existsByEmail(request.getEmail());
+        verify(userRepository, times(1)).findByEmail(request.getEmail());
         verify(userRepository, never()).save(any(User.class));
     }
 
