@@ -25,6 +25,9 @@ This project is inspired by EmbarkX’s microservices architecture course and ex
 ### 3. AI-Driven Personal Recommendation
 ![AI Recommendations](docs/screenshots/recommendations.png)
 
+### 4. End-to-End Automated Testing Flow
+![E2E Testing Flow](docs/screenshots/e2e_pass_update_test_1783883758332.webp)
+
 ---
 
 # 🚀 Tech Stack
