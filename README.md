@@ -89,6 +89,7 @@ graph TD
     UserSvc -->|Authentication/Registration| Keycloak[Keycloak Identity: Port 8181]
     UserSvc -->|Saves Profiles| Postgre[PostgreSQL: Port 5332]
     
+    ActSvc -->|gRPC: Validate User (Port 9091)| UserSvc
     ActSvc -->|Publishes Events| RabbitMQ[RabbitMQ: Port 5672]
     ActSvc -->|Saves Activities| MongoDB[MongoDB: Port 27017]
     
@@ -96,6 +97,44 @@ graph TD
     AISvc -->|Saves Recommendations| MongoDB
     AISvc -->|Prompts Analysis| Gemini[Google Gemini AI API]
 ```
+
+## gRPC Integration (Activity Service → User Service)
+
+The internal REST API call used by the **Activity Service** to validate a user's existence in the **User Service** has been retrofitted to use **gRPC (HTTP/2)** on port `9091`. This replacement provides a strongly-typed contract and low-latency, multiplexed communication.
+
+### Protobuf Service Contract (`user.proto`)
+```protobuf
+syntax = "proto3";
+
+package com.fitness.userservice.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.fitness.userservice.grpc";
+
+message UserValidationRequest {
+  string userId = 1;
+}
+
+message UserValidationResponse {
+  bool exists = 1;
+}
+
+service UserValidationService {
+  rpc ValidateUser(UserValidationRequest) returns (UserValidationResponse);
+}
+```
+
+### Components
+- **Server:** Implemented in `userservice` using `net.devh:grpc-server-spring-boot-starter`. Listens on port `9091`.
+- **Client:** Implemented in `activityservice` using `net.devh:grpc-client-spring-boot-starter`. Connects to `userservice` using a blocking stub.
+
+### Code Generation & IDE Warning Suppression
+To keep the development environment clean and warning-free, the build configuration includes:
+- **Compiler Alignment**: The native `protoc` compiler artifact is set to version `4.27.1` to align with the runtime Protobuf 4.x libraries on the classpath, preventing `GeneratedMessageV3` deprecation warnings.
+- **Automatic Suppressions**: A `maven-antrun-plugin` post-processor task is executed during the `process-sources` phase. It automatically scans all generated `.java` source files in the `target/generated-sources/protobuf` directory and injects `@java.lang.SuppressWarnings("all")` at the type declaration level.
+- **IDE Lifecycle Mappings**: Custom M2E lifecycle configurations are defined in the POM files to instruct Eclipse/IntelliJ to skip redundant incremental execution of the Antrun task, preventing IDE project configuration alerts.
+
+---
 
 ## Current Services & API Contracts
 

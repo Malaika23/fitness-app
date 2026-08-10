@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package com.fitness.userservice.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.fitness.userservice.grpc";
+
+message UserValidationRequest {
+  string userId = 1;
+}
+
+message UserValidationResponse {
+  bool exists = 1;
+}
+
+service UserValidationService {
+  rpc ValidateUser(UserValidationRequest) returns (UserValidationResponse);
+}
