@@ -189,7 +189,7 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/fitness-oauth2/protocol/openid-connect/certs
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       eureka:
         condition: service_healthy
     networks:
