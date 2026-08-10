@@ -107,6 +107,7 @@ services:
     build: ./userservice
     ports:
       - "8081:8081"
+      - "9091:9091"
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8888
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
@@ -137,6 +138,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
       - SPRING_MONGODB_URI=mongodb://mongodb:27017/fitness_activity_db
       - RABBITMQ_HOST=rabbitmq
+      - GRPC_CLIENT_USERSERVICE_ADDRESS=static://userservice:9091
     depends_on:
       mongodb:
         condition: service_healthy
