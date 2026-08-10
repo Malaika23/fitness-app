@@ -157,6 +157,32 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <replace dir="${project.build.directory}/generated-sources/protobuf" token="public final class" value="@java.lang.SuppressWarnings(&quot;all&quot;) public final class">
+                                    <include name="**/*.java"/>
+                                </replace>
+                                <replace dir="${project.build.directory}/generated-sources/protobuf" token="public class" value="@java.lang.SuppressWarnings(&quot;all&quot;) public class">
+                                    <include name="**/*.java"/>
+                                </replace>
+                                <replace dir="${project.build.directory}/generated-sources/protobuf" token="public interface" value="@java.lang.SuppressWarnings(&quot;all&quot;) public interface">
+                                    <include name="**/*.java"/>
+                                </replace>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
