@@ -133,7 +133,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
       - SPRING_MONGODB_URI=mongodb://mongodb:27017/fitness_activity_db
       - RABBITMQ_HOST=rabbitmq
-      - GRPC_CLIENT_USERSERVICE_ADDRESS=static://userservice:9091
+    command: ["java", "-jar", "app.jar", "--grpc.client.userservice.address=static://userservice:9091"]
     depends_on:
       mongodb:
         condition: service_healthy
