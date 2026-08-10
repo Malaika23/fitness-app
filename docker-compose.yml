@@ -63,11 +63,6 @@ services:
     networks:
       - fitness-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8080"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
   configserver:
     container_name: configserver-fitness
@@ -107,6 +102,7 @@ services:
     build: ./userservice
     ports:
       - "8081:8081"
+      - "9091:9091"
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8888
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
@@ -115,7 +111,7 @@ services:
       db:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
       eureka:
         condition: service_healthy
     networks:
@@ -137,6 +133,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
       - SPRING_MONGODB_URI=mongodb://mongodb:27017/fitness_activity_db
       - RABBITMQ_HOST=rabbitmq
+    command: ["java", "-jar", "app.jar", "--grpc.client.userservice.address=static://userservice:9091"]
     depends_on:
       mongodb:
         condition: service_healthy
@@ -192,7 +189,7 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/fitness-oauth2/protocol/openid-connect/certs
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       eureka:
         condition: service_healthy
     networks:
